@@ -1,15 +1,8 @@
 .env
-
-
-# Dataset
-data/
-*.zip
-*.csv
-processed/
-data_jsons/
-*.json
-
 readme.txt
 
 # models
-outputs/models/
+models/
+
+#test
+test/
