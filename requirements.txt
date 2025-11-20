@@ -6,9 +6,4 @@ spacy-transformers
 pydantic
 python-multipart
 
-unsloth
-torch
-transformers
-bitsandbytes
-accelerate
 # pip install -r requirements.txt
