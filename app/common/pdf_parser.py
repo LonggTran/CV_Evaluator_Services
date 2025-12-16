@@ -1,3 +1,4 @@
+#app/common/pdf_parser
 import pdfplumber
 
 def extract_text_from_pdf_bytes(pdf_bytes: bytes) -> str:

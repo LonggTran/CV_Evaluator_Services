@@ -5,5 +5,6 @@ spacy
 spacy-transformers
 pydantic
 python-multipart
-
+google-generativeai
 # pip install -r requirements.txt
+# pip install torch==2.9.1+cu126 torchvision==0.24.1+cu126 torchaudio==2.9.1+cu126 --index-url https://download.pytorch.org/whl/cu126
