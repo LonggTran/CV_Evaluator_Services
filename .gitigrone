@@ -8,3 +8,5 @@ models/
 test/
 
 .venv/
+
+ner_model/

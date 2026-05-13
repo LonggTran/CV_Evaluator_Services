@@ -1,42 +1,42 @@
-# app/main.py (hoặc file chứa FastAPI app)
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, UploadFile, File, HTTPException
+from app.services.pdf_reader import extract_and_clean_pdf
+from app.services.resume_parser import ResumeParserCore
+from app.models.schemas import ResumeResponse
 
-from app.llm.llm_jd_router import router as llm_jd_router
-from app.llm.llm_router import router as llm_router
-from app.llm.llm_suggestion import router as cv_suggestion_router  # Thêm dòng này
-from app.ner.ner_router import router as ner_router
-from app.api.chat import router as chat_router
-
-app = FastAPI(title="Resume Extraction API")
-
-# ---------------------------
-# 🚀 FIX CORS CHO FRONTEND
-# ---------------------------
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # hoặc ["http://localhost:5173"]
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+app = FastAPI(
+    title="AI Resume Parser API",
+    description="Hệ thống trích xuất thông tin ứng viên bằng mô hình RoBERTa Fine-tuned.",
+    version="1.0"
 )
-# ---------------------------
 
-# Include routers
-app.include_router(ner_router)
-app.include_router(llm_router)  # llm ner resume
-app.include_router(llm_jd_router)
-app.include_router(chat_router)  # llm chatbot
-app.include_router(cv_suggestion_router)  # Thêm dòng này - CV suggestion
+# Khởi tạo model ở cấp độ Toàn cục (Global) để không phải load lại mỗi lần gọi API
+ai_parser = ResumeParserCore(model_path="./ner_model")
 
-@app.get("/")
-def root():
-    return {
-        "message": "Resume Extraction API running!",
-        "endpoints": {
-            "LLM NER CV": "/llm/extract_ner_cv/",
-            "LLM NER JD": "/llm/extract_ner_jd/",
-            "CV Suggestion": "/llm/suggest_cv_improvements/",
-            "spaCy NER": "/ner/extract_ner/"
-        }
-    }
+
+@app.post("/api/v1/parse-cv", response_model=ResumeResponse)
+async def parse_cv_endpoint(file: UploadFile = File(...)):
+    """
+    API Nhận file PDF CV và trả về định dạng JSON.
+    """
+    # 1. Kiểm tra định dạng file
+    if not file.filename.lower().endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="Hệ thống hiện tại chỉ hỗ trợ định dạng PDF.")
+
+    try:
+        # 2. Đọc file tải lên dạng bytes
+        pdf_bytes = await file.read()
+
+        # 3. Trích xuất text
+        text = extract_and_clean_pdf(pdf_bytes)
+        if not text:
+            raise HTTPException(status_code=400,
+                                detail="Không thể đọc được văn bản từ PDF (Có thể là ảnh scan/bảo mật).")
+
+        # 4. Phân tích bằng AI Model
+        parsed_data = ai_parser.parse(text)
+
+        # 5. Trả kết quả JSON
+        return parsed_data
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi Server nội bộ: {str(e)}")
